@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link type="text/css" rel="stylesheet" href="/static/main.css" />
+    <title>Kan-Udacity Wiki</title>
+</head>
+
+<body>
+    <!--a href="/blog" class="main-title">
+        Kan-Udacity Blog
+    </a-->
+  
+    <div class="login-area">
+        {% if logged_in %}
+        <a class="login-link" href="/wiki/_edit/">edit</a>)
+        {% endif %}
+        <a class="login-link" href="/wiki/_history/">history</a>
+        |
+        {% if logged_in %}
+        {{username}} (<a class="login-link" href="/wiki/logout">logout</a>)
+        {% else %}
+        <a class="login-link" href="/wiki/login">login</a>
+        |
+        <a class="login-link" href="/wiki/signup">signup</a>
+        {% endif %}
+    </div>
+
+    <div id="content">
+        {% block content %}
+        {% endblock %}
+    </div>
+
+    <!--div class="age">
+        Queried {{age}} seconds ago
+    </div-->
+</body>
+
+</html>
+
