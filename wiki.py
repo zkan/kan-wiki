@@ -261,15 +261,15 @@ class EditPage(WikiHandler):
 class WikiPage(WikiHandler):
     def get(self, page_name):
         self.write(page_name)
-#        self.render('wiki-front.html')
+        self.render('front.html')
 
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
-app = webapp2.WSGIApplication([('/wiki/signup', Signup),
-                               ('/wiki/login', Login),
-                               ('/wiki/logout', Logout),
-                               ('/wiki/_edit' + PAGE_RE, EditPage),
-                               ('/wiki/_edit' + PAGE_RE, EditPage),
-                               ('/wiki' + PAGE_RE, WikiPage),
+app = webapp2.WSGIApplication([('/signup', Signup),
+                               ('/login', Login),
+                               ('/logout', Logout),
+                               ('/_edit' + PAGE_RE, EditPage),
+                               ('/_edit' + PAGE_RE, EditPage),
+                               (PAGE_RE, WikiPage),
                                ],
                               debug = DEBUG)
 
