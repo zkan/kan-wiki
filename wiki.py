@@ -114,15 +114,20 @@ class User(db.Model):
 
 ##### wiki stuff
 
-def wiki_key(name = 'default'):
+def pages_key(name = 'default'):
     return db.Key.from_path('pages', name)
 
 class Page(db.Model):
-    subject = db.StringProperty(required = True)
+    name = db.StringProperty(required = True)
     content = db.TextProperty(required = True)
     created = db.DateTimeProperty(auto_now_add = True)
     last_modified = db.DateTimeProperty(auto_now = True)
 
+    @classmethod
+    def by_name(cls, name):
+        p = Page.all().filter('name =', name).get()
+        return p
+    
     def render(self):
         self._render_text = self.content.replace('\n', '<br>')
         return render_str("page.html", p = self)
@@ -231,7 +236,7 @@ class Register(Signup):
             u.put()
 
         self.login(u)
-        self.redirect('/wiki')
+        self.redirect('/')
 
 class Login(WikiHandler):
     def get(self):
@@ -244,7 +249,7 @@ class Login(WikiHandler):
         u = User.login(username, password)
         if u:
             self.login(u)
-            self.redirect('/wiki')
+            self.redirect('/')
         else:
             msg = 'Invalid login'
             self.render('login-form.html', error = msg)
@@ -252,19 +257,57 @@ class Login(WikiHandler):
 class Logout(WikiHandler):
     def get(self):
         self.logout()
-        self.redirect('/wiki')
+        self.redirect('/')
 
 class EditPage(WikiHandler):
-    def get(self):
-        pass
+    def get(self, page_name):
+        if self.user:
+            username = self.user.name
+        else:
+            self.redirect()
+
+        self.write(page_name)
+        self.render('edit-page-form.html', username = username, 
+                                           page_name = page_name)
+
+    def post(self, page_name):
+        name = self.request.get('name')
+        content = self.request.get('content')
+
+        p = Page(parent = pages_key(),
+                 name = name, 
+                 content = content)
+        p.put()
+        self.redirect('/')
 
 class WikiPage(WikiHandler):
     def get(self, page_name):
-        self.write(page_name)
-        self.render('front.html')
+        if self.user:
+            username = self.user.name
+        else:
+            username = None
+
+#        self.write(page_name)
+        p = Page.by_name(page_name)
+        if p:
+            self.render('page.html', username = username, 
+                                     page_name = page_name, 
+                                     page_content = p.content)
+        else:
+            if username:
+                self.redirect('/_edit' + page_name)
+            else:
+                self.redirect('/login')
+
+        self.render('page.html', username = username, 
+                                 page_name = page_name)
+
+#    def post(self, page_name):
+#        pass
+
 
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
-app = webapp2.WSGIApplication([('/signup', Signup),
+app = webapp2.WSGIApplication([('/signup', Register),
                                ('/login', Login),
                                ('/logout', Logout),
                                ('/_edit' + PAGE_RE, EditPage),
