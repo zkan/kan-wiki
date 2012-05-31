@@ -125,18 +125,12 @@ class Page(db.Model):
 
     @classmethod
     def by_name(cls, name):
-        p = Page.all().filter('name =', name).get()
+        p = Page.all().filter('name =', name).order('-created').get()
         return p
     
     def render(self):
         self._render_text = self.content.replace('\n', '<br>')
-        return render_str("page.html", p = self)
 
-class PageHistory(db.Model):
-    name = db.StringProperty(required = True)
-    content = db.TextProperty(required = True)
-    created = db.DateTimeProperty(auto_now_add = True)
-    last_modified = db.DateTimeProperty(auto_now = True) 
 
 #class BlogFront(BlogHandler):
 #    def get(self):
@@ -292,7 +286,7 @@ class EditPage(WikiHandler):
                  name = name, 
                  content = content)
         p.put()
-        self.redirect('/')
+        self.redirect(page_name)
 
 class WikiPage(WikiHandler):
     def get(self, page_name):
