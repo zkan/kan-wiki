@@ -132,6 +132,12 @@ class Page(db.Model):
         self._render_text = self.content.replace('\n', '<br>')
         return render_str("page.html", p = self)
 
+class PageHistory(db.Model):
+    name = db.StringProperty(required = True)
+    content = db.TextProperty(required = True)
+    created = db.DateTimeProperty(auto_now_add = True)
+    last_modified = db.DateTimeProperty(auto_now = True) 
+
 #class BlogFront(BlogHandler):
 #    def get(self):
 #        posts = greetings = Post.all().order('-created')
@@ -264,11 +270,19 @@ class EditPage(WikiHandler):
         if self.user:
             username = self.user.name
         else:
-            self.redirect()
+            username = None
 
-        self.write(page_name)
-        self.render('edit-page-form.html', username = username, 
-                                           page_name = page_name)
+        p = Page.by_name(page_name)
+        if p:
+            self.render('edit-page-form.html', username = username, 
+                                               page_name = page_name, 
+                                               page_content = p.content)
+        else:
+            if username:
+                self.render('edit-page-form.html', username = username, 
+                                                   page_name = page_name)
+            else:
+                self.redirect('/login')
 
     def post(self, page_name):
         name = self.request.get('name')
