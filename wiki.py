@@ -4,6 +4,7 @@ import random
 import hashlib
 import hmac
 from string import letters
+import logging
 
 import webapp2
 import jinja2
@@ -28,6 +29,13 @@ def check_secure_val(secure_val):
     val = secure_val.split('|')[0]
     if secure_val == make_secure_val(val):
         return val
+
+def escape_html(s):
+    s = s.replace('&', '&amp;')
+    s = s.replace('>', '&gt;')
+    s = s.replace('<', '&lt;')
+    s = s.replace('"', '&quot;')
+    return s
 
 class WikiHandler(webapp2.RequestHandler):
     def write(self, *a, **kw):
@@ -124,13 +132,17 @@ class Page(db.Model):
     last_modified = db.DateTimeProperty(auto_now = True)
 
     @classmethod
+    def by_id(cls, uid):
+        return Page.get_by_id(uid, parent = pages_key())
+    
+    @classmethod
     def by_name(cls, name):
         p = Page.all().filter('name =', name).order('-created').get()
         return p
-    
-    def render(self):
-        self._render_text = self.content.replace('\n', '<br>')
 
+#    def render(self):
+#        self._render_text = self.content.replace('\n', '<br>')
+#        return template.render_str("post.html", p = self)
 
 #class BlogFront(BlogHandler):
 #    def get(self):
@@ -266,29 +278,35 @@ class EditPage(WikiHandler):
         else:
             username = None
 
-        p = Page.by_name(page_name)
-        if p:
-            self.render('edit-page-form.html', username = username, 
-                                               page_name = page_name, 
-                                               page_content = p.content)
+        page_id = self.request.get('v')
+        if page_id:
+            logging.error(page_id)
+            p = Page.by_id(int(page_id))
         else:
-            if username:
+            logging.error('no page_id')
+            p = Page.by_name(page_name)
+
+        if username:
+            if p:
+                self.render('edit-page-form.html', username = username, 
+                                                   page_name = page_name, 
+                                                   page_content = p.content)
+            else:
                 self.render('edit-page-form.html', username = username, 
                                                    page_name = page_name)
-            else:
-                self.redirect('/login')
+        else:
+            self.redirect('/login')
 
     def post(self, page_name):
-        name = self.request.get('name')
         content = self.request.get('content')
 
         p = Page(parent = pages_key(),
-                 name = name, 
+                 name = page_name, 
                  content = content)
         p.put()
         self.redirect(page_name)
 
-class WikiPage(WikiHandler):
+class ViewPage(WikiHandler):
     def get(self, page_name):
         if self.user:
             username = self.user.name
@@ -296,11 +314,20 @@ class WikiPage(WikiHandler):
             username = None
 
 #        self.write(page_name)
-        p = Page.by_name(page_name)
+        page_id = self.request.get('v')
+        if page_id:
+            logging.error(page_id)
+            p = Page.by_id(int(page_id))
+        else:
+            logging.error('no page_id')
+            p = Page.by_name(page_name)
+
         if p:
+            page_content = escape_html(p.content)
+            page_content = page_content.replace('\n', '<br>')
             self.render('page.html', username = username, 
                                      page_name = page_name, 
-                                     page_content = p.content)
+                                     page_content = page_content)
         else:
             if username:
                 self.redirect('/_edit' + page_name)
@@ -310,17 +337,29 @@ class WikiPage(WikiHandler):
         self.render('page.html', username = username, 
                                  page_name = page_name)
 
+
 #    def post(self, page_name):
 #        pass
 
+class PageHistory(WikiHandler):
+    def get(self, page_name):
+        if self.user:
+            username = self.user.name
+        else:
+            username = None
+        
+        page_history = Page.all().filter('name =', page_name).order('-created')
+        self.render('page-history.html', username = username, 
+                                         page_history = page_history, 
+                                         page_name = page_name) 
 
 PAGE_RE = r'(/(?:[a-zA-Z0-9_-]+/?)*)'
 app = webapp2.WSGIApplication([('/signup', Register),
                                ('/login', Login),
                                ('/logout', Logout),
                                ('/_edit' + PAGE_RE, EditPage),
-                               ('/_edit' + PAGE_RE, EditPage),
-                               (PAGE_RE, WikiPage),
+                               ('/_history' + PAGE_RE, PageHistory),
+                               (PAGE_RE, ViewPage),
                                ],
                               debug = DEBUG)
 
