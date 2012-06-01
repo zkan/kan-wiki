@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+    <div id="history">
+    {% for p in page_history %}
+        <div class="page_history">
+            <div class="page_created">{{ p.created }}</div>
+            <div class="page_content">{{ p.content }}</div>
+            <div><a href = "{{ page_name }}?v={{ p.key().id() }}">view</a></div>
+            <div><a href = "/_edit{{ page_name }}?v={{ p.key().id() }}">edit</a></div>
+        </div>
+        <br />
+    {% endfor %}
+    </div>
+
+{% endblock %}
